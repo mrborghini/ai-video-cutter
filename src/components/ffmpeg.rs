@@ -66,7 +66,7 @@ impl FFmpeg {
         }
     }
 
-    pub fn split_video_in_parts(&self, video: Video) -> Vec<String> {
+    pub fn split_video_in_parts(&self, video: Video, on_progress: fn(amount: i32, total: i32)) -> Vec<String> {
         let video_seconds = video.time_seconds as i32;
         let mut paths: Vec<String> = Vec::new();
         for i in 0..video_seconds {
@@ -74,6 +74,7 @@ impl FFmpeg {
                 continue;
             }
             let path = format!("{}{}", i, video.video_format);
+            on_progress(i, video_seconds);
             self.run_ffmpeg(&[
                 "-i",
                 &video.path,
@@ -88,6 +89,7 @@ impl FFmpeg {
             ]);
             paths.push(path);
         }
+        on_progress(video_seconds, video_seconds);
         paths
     }
 
