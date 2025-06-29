@@ -1,7 +1,7 @@
 mod components;
 use std::io::Write;
 
-use crate::components::FFmpeg;
+use crate::components::{FFmpeg, Whisper};
 
 const BAR_WIDTH: i32 = 16;
 
@@ -19,12 +19,12 @@ fn on_progress(amount: i32, total: i32) {
 
     // Add the amount of hashtags to the string
     for _ in 0..num_hashtags {
-        bar.push('#')
+        bar.push('█')
     }
 
     // Add the amount of dashes to the string
     for _ in 0..num_dashes {
-        bar.push('-')
+        bar.push('▒')
     }
 
     // Add \r to not replace the progress bar
@@ -36,10 +36,16 @@ fn on_progress(amount: i32, total: i32) {
 
 fn main() {
     let ffmpeg = FFmpeg::new();
+    let whisper = Whisper::new("./whisper.cpp/models/ggml-large-v3-turbo.bin".to_string());
     println!("Detecting video information...");
     let video = ffmpeg.get_video_info("test-video.mkv".to_string());
     println!("Duration: {} seconds", video.time_seconds);
     println!("Frames: {}", video.frames);
     println!("Splitting video into parts...");
     let clips = ffmpeg.split_video_in_parts(video, on_progress);
+    println!();
+    for clip in clips {
+        println!("Analyzing audio for clip {}...", clip);
+        whisper.analyze_audio(clip);
+    }
 }

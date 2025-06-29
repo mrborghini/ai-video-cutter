@@ -1,5 +1,6 @@
+use std::env;
+use std::path::PathBuf;
 use std::process::Command;
-use std::str;
 
 pub struct Video {
     pub path: String,
@@ -66,14 +67,27 @@ impl FFmpeg {
         }
     }
 
-    pub fn split_video_in_parts(&self, video: Video, on_progress: fn(amount: i32, total: i32)) -> Vec<String> {
+    pub fn extract_audio(&self, video_path: &str) -> String {
+        let output_path = format!("{}.wav", video_path);
+        self.run_ffmpeg(&["-i", &video_path, &output_path]);
+        output_path
+    }
+
+    pub fn split_video_in_parts(
+        &self,
+        video: Video,
+        on_progress: fn(amount: i32, total: i32),
+    ) -> Vec<String> {
         let video_seconds = video.time_seconds as i32;
+
         let mut paths: Vec<String> = Vec::new();
         for i in 0..video_seconds {
             if i % 60 != 0 {
                 continue;
             }
-            let path = format!("{}{}", i, video.video_format);
+            let video_name = format!("{}{}", i, video.video_format);
+            let temp_path: PathBuf = env::temp_dir();
+            let out_path = temp_path.join(video_name).to_str().unwrap().to_string();
             on_progress(i, video_seconds);
             self.run_ffmpeg(&[
                 "-i",
@@ -85,9 +99,9 @@ impl FFmpeg {
                 "60",
                 "-c",
                 "copy",
-                &path,
+                &out_path,
             ]);
-            paths.push(path);
+            paths.push(out_path);
         }
         on_progress(video_seconds, video_seconds);
         paths
