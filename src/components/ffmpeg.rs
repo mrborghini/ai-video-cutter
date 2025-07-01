@@ -1,6 +1,5 @@
-use std::env;
-use std::path::PathBuf;
-use std::process::Command;
+use std::path::Path;
+use crate::components::run_command;
 
 pub struct Video {
     pub path: String,
@@ -16,18 +15,8 @@ impl FFmpeg {
         Self {}
     }
 
-    fn run_ffmpeg(&self, args: &[&str]) -> String {
-        let output = Command::new("ffmpeg")
-            .args(args)
-            .output()
-            .expect("Failed to run ffmpeg");
-
-        let output_str = String::from_utf8_lossy(&output.stderr).to_string();
-        output_str
-    }
-
     pub fn get_video_info(&self, path: String) -> Video {
-        let stderr = self.run_ffmpeg(&[
+        let stderr = run_command("ffmpeg", &[
             "-i", &path, "-map", "0:v:0", "-c", "copy", "-f", "null", "-",
         ]);
 
@@ -67,15 +56,15 @@ impl FFmpeg {
         }
     }
 
-    pub fn extract_audio(&self, video_path: &str) -> String {
-        let output_path = format!("{}.wav", video_path);
-        self.run_ffmpeg(&["-i", &video_path, &output_path]);
-        output_path
+    pub fn extract_audio(&self, video_path: &str, output_path: &str) -> String {
+        run_command("ffmpeg", &["-i", &video_path, &output_path]);
+        output_path.to_string()
     }
 
     pub fn split_video_in_parts(
         &self,
         video: Video,
+        out_dir: &str,
         on_progress: fn(amount: i32, total: i32),
     ) -> Vec<String> {
         let video_seconds = video.time_seconds as i32;
@@ -85,11 +74,11 @@ impl FFmpeg {
             if i % 60 != 0 {
                 continue;
             }
+            let temp_path = Path::new(out_dir);
             let video_name = format!("{}{}", i, video.video_format);
-            let temp_path: PathBuf = env::temp_dir();
             let out_path = temp_path.join(video_name).to_str().unwrap().to_string();
             on_progress(i, video_seconds);
-            self.run_ffmpeg(&[
+            run_command("ffmpeg", &[
                 "-i",
                 &video.path,
                 "-y",

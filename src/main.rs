@@ -1,9 +1,10 @@
 mod components;
-use std::io::Write;
+use std::{fs, io::Write};
 
 use crate::components::{FFmpeg, Whisper};
 
 const BAR_WIDTH: i32 = 16;
+const OUT_DIR: &str = "output";
 
 fn on_progress(amount: i32, total: i32) {
     let mut bar: String = String::new();
@@ -36,16 +37,20 @@ fn on_progress(amount: i32, total: i32) {
 
 fn main() {
     let ffmpeg = FFmpeg::new();
-    let whisper = Whisper::new("./whisper.cpp/models/ggml-large-v3-turbo.bin".to_string());
+    let whisper = Whisper::new(
+        "./whisper.cpp/models/ggml-large-v3-turbo.bin".to_string(),
+        "./whisper.cpp/build/bin/whisper-cli".to_string(),
+    );
     println!("Detecting video information...");
     let video = ffmpeg.get_video_info("test-video.mkv".to_string());
     println!("Duration: {} seconds", video.time_seconds);
     println!("Frames: {}", video.frames);
     println!("Splitting video into parts...");
-    let clips = ffmpeg.split_video_in_parts(video, on_progress);
+    let _ = fs::create_dir(OUT_DIR);
+    let clips = ffmpeg.split_video_in_parts(video, OUT_DIR, on_progress);
     println!();
     for clip in clips {
         println!("Analyzing audio for clip {}...", clip);
-        whisper.analyze_audio(clip);
+        whisper.analyze_audio(clip, OUT_DIR);
     }
 }
