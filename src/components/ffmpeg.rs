@@ -67,11 +67,12 @@ impl FFmpeg {
         out_dir: &str,
         on_progress: fn(amount: i32, total: i32),
     ) -> Vec<String> {
+        let clip_length = 60;
         let video_seconds = video.time_seconds as i32;
 
         let mut paths: Vec<String> = Vec::new();
         for i in 0..video_seconds {
-            if i % 60 != 0 {
+            if i % clip_length != 0 {
                 continue;
             }
             let temp_path = Path::new(out_dir);
@@ -85,7 +86,7 @@ impl FFmpeg {
                 "-ss",
                 &i.to_string(),
                 "-t",
-                "60",
+                &clip_length.to_string(),
                 "-c",
                 "copy",
                 &out_path,
